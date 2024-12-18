@@ -8,7 +8,7 @@ import * as lspClient from 'vscode-languageclient/node';
 import * as net from 'net';
 import { register_commands } from './rconsoleCommands';
 import { QuickActionProvider } from './quickProvider';
-
+import { collectEnvAndUpdateLsp } from './environmentCollector';
 
 const DEBUG_HTTP_PORT = 8001;
 const DEBUG_LSP_PORT = 8002;
@@ -349,6 +349,7 @@ export class RustBinaryBlob
         // A little doubt remains about the http port, but it's very likely there's no race.
         await this.read_caps();
         await this.fetch_toolbox_config();
+        await collectEnvAndUpdateLsp();
     }
 
     public async start_lsp_socket()
@@ -451,6 +452,40 @@ export class RustBinaryBlob
       global.toolbox_config = json;
       await register_commands();
       return json;
+    }
+
+    public async update_env(payload: any): Promise<any> {
+        const rust_url = this.rust_url();
+        if (!rust_url) {
+            console.log(["update_env: No rust binary working"]);
+            return Promise.reject("No rust binary working");
+        }
+        const url = rust_url + "v1/update-env";
+
+        const headers = {
+            "Content-Type": "application/json",
+        };
+
+        const request = new fetchH2.Request(url, { 
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify(payload),
+        });
+
+        const response = await fetchH2.fetch(request, { timeout: 5000 });
+  
+        if (!response.ok) {
+          console.log([
+            "update_env: Error update lsp environment",
+            response.status,
+            url,
+          ]);
+          return Promise.reject(
+            `Error update lsp environment: [status: ${response.status}] [statusText: ${response.statusText}]`
+          );
+        }
+        console.log(["success update_env"]);
+        return Promise.resolve()
     }
 }
 

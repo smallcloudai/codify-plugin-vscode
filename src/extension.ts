@@ -20,6 +20,7 @@ import { fileURLToPath } from 'url';
 import { ChatTab } from './chatTab';
 import { FimDebugData } from 'refact-chat-js/dist/events/index.js';
 import { code_lens_execute } from './codeLens';
+import { subscribeSettingsChanges } from './environmentCollector';
 
 declare global {
     var rust_binary_blob: launchRust.RustBinaryBlob|undefined;
@@ -212,7 +213,7 @@ export async function inline_accepted(this_completion_serial_number: number)
 }
 
 
-export function activate(context: vscode.ExtensionContext)
+export async function activate(context: vscode.ExtensionContext)
 {
     global.global_context = context;
     global.enable_longthink_completion = false;
@@ -399,6 +400,7 @@ export function activate(context: vscode.ExtensionContext)
             }
         )
     );
+    await subscribeSettingsChanges();
 }
 
 export async function rollback_and_regen(editor: vscode.TextEditor)
